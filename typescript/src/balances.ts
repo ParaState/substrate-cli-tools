@@ -4,15 +4,16 @@ import { ApiPromise, Keyring } from "@polkadot/api";
 import { Balance } from "@polkadot/types/interfaces/runtime";
 import { U256 } from '@polkadot/types/primitive';
 
-import { computeEvmId, constructLabel, unfoldId } from "./utils/accounts";
+import { computeEvmId, computeSsvmId, constructLabel, unfoldId } from "./utils/accounts";
 import { getWsProvider } from "./utils/connection";
 import TokenUnit from "./utils/token";
 import { TYPES } from "./utils/types";
 
 async function main() {
     const args = process.argv.slice(2);
-    const ids = args.filter((arg) => arg !== "--evm");
-    const evm = ids.length < args.length;
+    const ids = args.filter((arg) => arg !== "--evm" && arg !== "--ssvm");
+    const evm = args.includes("--evm");
+    const ssvm = args.includes("--ssvm");
 
     const api = await ApiPromise.create(Object.assign(
         { provider: getWsProvider() },
@@ -29,6 +30,9 @@ async function main() {
             if (evm) {
                 address = computeEvmId(keyring, address);
                 console.log(`${label}'s EVM address is ${address}`);
+            } else if (ssvm) {
+                address = computeSsvmId(keyring, address);
+                console.log(`${label}'s SSVM address is ${address}`);
             }
 
             return [label, address];
@@ -44,6 +48,15 @@ async function main() {
             (evmAccounts) => {
                 // @ts-ignore
                 const balances = evmAccounts.map((evmAccount: Account) => evmAccount.balance);
+                handleBalancesChange<U256>(labels, null, previous, balances);
+            });
+    } else if (ssvm) {
+        const previous: Array<U256 | undefined> = accounts.map((_) => undefined);
+
+        await api.query.ssvm.accounts.multi(addresses,
+            (ssvmAccounts) => {
+                // @ts-ignore
+                const balances = ssvmAccounts.map((ssvmAccount: Account) => ssvmAccount.balance);
                 handleBalancesChange<U256>(labels, null, previous, balances);
             });
     } else {
