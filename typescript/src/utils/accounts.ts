@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/api";
-import { blake2AsHex } from "@polkadot/util-crypto";
+import { blake2AsHex, keccakAsHex } from "@polkadot/util-crypto";
 
 export function constructLabel(id: string): string {
     if (id.startsWith("/")) {
@@ -20,6 +20,13 @@ export function unfoldId(keyring: Keyring, id: string): string {
 export function computeEvmId(keyring: Keyring, address: string): string {
     const bytes = keyring.decodeAddress(address);
     const hex = blake2AsHex(bytes, 256);
+    console.assert(hex.length === 66); // 0x + 32 bytes
+    return "0x" + hex.substring(2 + 24); // skipping 12 bytes
+}
+
+export function computeSsvmId(keyring: Keyring, address: string): string {
+    const bytes = keyring.decodeAddress(address);
+    const hex = keccakAsHex(bytes);
     console.assert(hex.length === 66); // 0x + 32 bytes
     return "0x" + hex.substring(2 + 24); // skipping 12 bytes
 }
